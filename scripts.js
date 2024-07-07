@@ -1,5 +1,128 @@
-// Данные о путешествиях (хранение в памяти браузера)
+// Данные о пользователях и путешествиях (хранение в памяти браузера)
+let users = [];
 let travels = [];
+
+// Функция инициализации приложения
+function initApp() {
+    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    if (currentUser) {
+        showLoggedInNav(currentUser);
+        showMyTravels(currentUser.username);
+    } else {
+        showLoggedOutNav();
+        showLoginForm();
+    }
+}
+
+// Функция отображения навигации для авторизованного пользователя
+function showLoggedInNav(currentUser) {
+    const navbar = document.getElementById('navbar');
+    navbar.innerHTML = `
+        <ul>
+            <li><a href="#" onclick="showMyTravels('${currentUser.username}')">My Travels</a></li>
+            <li><a href="#" onclick="showAddTravelForm()">Add Travel</a></li>
+            <li><a href="#" onclick="showAllTravels()">All Travels</a></li>
+            <li><a href="#" onclick="logout()">Logout</a></li>
+        </ul>
+    `;
+}
+
+// Функция отображения навигации для неавторизованного пользователя
+function showLoggedOutNav() {
+    const navbar = document.getElementById('navbar');
+    navbar.innerHTML = `
+        <ul>
+            <li><a href="#" onclick="showLoginForm()">Login</a></li>
+            <li><a href="#" onclick="showRegisterForm()">Register</a></li>
+        </ul>
+    `;
+}
+
+// Функция отображения формы входа
+function showLoginForm() {
+    const contentDiv = document.getElementById('content');
+    contentDiv.innerHTML = `
+        <div class="form-container">
+            <h2>Login</h2>
+            <form onsubmit="login(event)">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" required><br>
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required><br>
+                <button type="submit">Login</button>
+            </form>
+        </div>
+    `;
+}
+
+// Функция отображения формы регистрации
+function showRegisterForm() {
+    const contentDiv = document.getElementById('content');
+    contentDiv.innerHTML = `
+        <div class="form-container">
+            <h2>Register</h2>
+            <form onsubmit="register(event)">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" required><br>
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" required><br>
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required><br>
+                <button type="submit">Register</button>
+            </form>
+        </div>
+    `;
+}
+
+// Функция для авторизации пользователя
+function login(event) {
+    event.preventDefault();
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+
+    const foundUser = users.find(user => user.username === username && user.password === password);
+    if (foundUser) {
+        localStorage.setItem('currentUser', JSON.stringify({ username: foundUser.username }));
+        initApp();
+    } else {
+        alert('Invalid username or password');
+    }
+}
+
+// Функция для регистрации пользователя
+function register(event) {
+    event.preventDefault();
+    const username = document.getElementById('username').value;
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+
+    if (users.some(user => user.username === username)) {
+        alert('Username already exists');
+        return;
+    }
+
+    users.push({ username, email, password });
+    localStorage.setItem('users', JSON.stringify(users));
+    showLoginForm();
+    alert('Registration successful. Please login.');
+}
+
+// Функция для выхода из учетной записи
+function logout() {
+    localStorage.removeItem('currentUser');
+    initApp();
+}
+
+// Функция отображения записей о путешествиях пользователя
+function showMyTravels(username) {
+    const currentUserTravels = travels.filter(travel => travel.username === username);
+    showTravels(currentUserTravels);
+}
+
+// Функция отображения всех записей о путешествиях
+function showAllTravels() {
+    showTravels(travels);
+}
 
 // Функция отображения записей о путешествиях
 function showTravels(travelsData) {
@@ -13,71 +136,70 @@ function showTravels(travelsData) {
             <h3>${travel.location}</h3>
             <p><strong>Cost:</strong> $${travel.cost}</p>
             <p><strong>Places Visited:</strong> ${travel.placesVisited.join(', ')}</p>
-            <button onclick="viewTravel(${travel.id})">View Details</button>
+            <p><strong>Rating:</strong> ${travel.rating}</p>
+            <p><strong>Location:</strong> ${travel.locationCoordinates}</p>
+            <img src="${travel.image}" alt="Travel Image" style="max-width: 100%;"><br>
         `;
         contentDiv.appendChild(travelDiv);
     });
 }
 
-// Функция отображения моих путешествий
-function showMyTravel() {
-    // Пример данных путешествий
-    travels = [
-        { id: 1, location: 'Paris', cost: 1000, placesVisited: ['Eiffel Tower', 'Louvre Museum'] },
-        { id: 2, location: 'Tokyo', cost: 1500, placesVisited: ['Shibuya Crossing', 'Tokyo Tower'] }
-    ];
-    showTravels(travels);
-}
-
 // Функция добавления нового путешествия
-function addTravel() {
-    const location = prompt('Enter location:');
-    const cost = parseFloat(prompt('Enter cost:'));
-    const placesVisited = prompt('Enter places visited (separated by commas):').split(',');
+function addTravel(event) {
+    event.preventDefault();
+    const location = document.getElementById('location').value;
+    const cost = parseFloat(document.getElementById('cost').value);
+    const placesVisited = document.getElementById('placesVisited').value.split(',').map(place => place.trim());
+    const rating = parseInt(document.getElementById('rating').value);
+    const locationCoordinates = document.getElementById('locationCoordinates').value;
+    const image = document.getElementById('image').value;
 
+    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
     const newTravel = {
         id: travels.length + 1,
+        username: currentUser.username,
         location: location,
         cost: cost,
-        placesVisited: placesVisited.map(place => place.trim())
+        placesVisited: placesVisited,
+        rating: rating,
+        locationCoordinates: locationCoordinates,
+        image: image
     };
 
     travels.push(newTravel);
-    showTravels(travels);
+    showMyTravels(currentUser.username);
 }
 
-// Функция отображения всех путешествий
-function showAllTravels() {
-    // Пример данных всех путешествий (можно добавить фильтрацию и сортировку)
-    const allTravels = travels;
-    showTravels(allTravels);
-}
-
-// Функция просмотра деталей путешествия
-function viewTravel(travelId) {
-    const travel = travels.find(travel => travel.id === travelId);
-    if (travel) {
-        alert(`Location: ${travel.location}\nCost: $${travel.cost}\nPlaces Visited: ${travel.placesVisited.join(', ')}`);
-    } else {
-        alert('Travel not found');
-    }
-}
-
-// Показать форму добавления путешествия
+// Функция отображения формы добавления путешествия
 function showAddTravelForm() {
     const contentDiv = document.getElementById('content');
     contentDiv.innerHTML = `
-        <form onsubmit="addTravel(); return false;">
-            <label for="location">Location:</label><br>
-            <input type="text" id="location" name="location" required><br><br>
+        <div class="form-container">
+            <h2>Add New Travel</h2>
+            <form onsubmit="addTravel(event)">
+                <label for="location">Location:</label>
+                <input type="text" id="location" name="location" required><br>
 
-            <label for="cost">Cost ($):</label><br>
-            <input type="number" id="cost" name="cost" min="0" step="0.01" required><br><br>
+                <label for="cost">Cost ($):</label>
+                <input type="number" id="cost" name="cost" min="0" step="0.01" required><br>
 
-            <label for="placesVisited">Places Visited (comma-separated):</label><br>
-            <input type="text" id="placesVisited" name="placesVisited" required><br><br>
+                <label for="placesVisited">Places Visited (comma-separated):</label>
+                <input type="text" id="placesVisited" name="placesVisited" required><br>
 
-            <button type="submit">Add Travel</button>
-        </form>
+                <label for="rating">Rating (1-5):</label>
+                <input type="number" id="rating" name="rating" min="1" max="5" required><br>
+
+                <label for="locationCoordinates">Location Coordinates:</label>
+                <input type="text" id="locationCoordinates" name="locationCoordinates"><br>
+
+                <label for="image">Image URL:</label>
+                <input type="text" id="image" name="image"><br>
+
+                <button type="submit">Add Travel</button>
+            </form>
+        </div>
     `;
 }
+
+// Инициализация приложения при загрузке страницы
+window.onload = initApp;
